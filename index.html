@@ -109,6 +109,11 @@
     </div>
 
     <script>
+        // Constants
+        const INCH_TO_MM = 25.4;
+        const TYRE_PACKAGE_MARGIN = 20; // Extra margin for tyre/wheel packaging (mm)
+        const RIM_PACKAGE_MARGIN = 30; // Extra margin for rim packaging (mm)
+        
         let currentType = 'wheel';
 
         // Type selection buttons
@@ -185,20 +190,24 @@
         }
 
         // Calculate package dimensions
+        // Note: Assumes wheels/tyres are packaged standing upright (vertically)
         function calculateDimensions(type, input) {
-            let diameter, width, height, details;
+            let packageLength, packageWidth, packageHeight, details;
 
             if (type === 'wheel' || type === 'tyre') {
                 const tyre = parseTyreSize(input);
                 
                 // Calculate tyre dimensions
                 const sidewallHeight = (tyre.width * tyre.profile) / 100; // in mm
-                const totalDiameter = (tyre.rimDiameter * 25.4) + (2 * sidewallHeight); // convert inches to mm and add both sidewalls
+                const totalDiameter = (tyre.rimDiameter * INCH_TO_MM) + (2 * sidewallHeight); // convert inches to mm and add both sidewalls
                 
-                // Package dimensions (with some margin for packaging)
-                diameter = Math.ceil(totalDiameter / 10) * 10; // Round up to nearest 10mm
-                width = Math.ceil(tyre.width / 10) * 10 + 20; // Add 20mm margin
-                height = Math.ceil(totalDiameter / 10) * 10 + 20; // Add 20mm margin
+                // Package dimensions (wheels packaged standing upright)
+                // Length and height are based on the wheel diameter (standing upright)
+                // Width is based on the tyre width
+                const roundedDiameter = Math.ceil(totalDiameter / 10) * 10; // Round up to nearest 10mm
+                packageLength = roundedDiameter + TYRE_PACKAGE_MARGIN;
+                packageWidth = Math.ceil(tyre.width / 10) * 10 + TYRE_PACKAGE_MARGIN;
+                packageHeight = roundedDiameter + TYRE_PACKAGE_MARGIN;
 
                 details = `
                     <p><strong>Szczegóły obliczenia:</strong></p>
@@ -213,13 +222,14 @@
                 const rim = parseRimSize(input);
                 
                 // Convert rim dimensions to mm
-                const rimDiameterMm = rim.diameter * 25.4;
-                const rimWidthMm = rim.width * 25.4;
+                const rimDiameterMm = rim.diameter * INCH_TO_MM;
+                const rimWidthMm = rim.width * INCH_TO_MM;
                 
-                // Package dimensions for rim only (with margin)
-                diameter = Math.ceil(rimDiameterMm / 10) * 10 + 30;
-                width = Math.ceil(rimWidthMm / 10) * 10 + 30;
-                height = Math.ceil(rimDiameterMm / 10) * 10 + 30;
+                // Package dimensions for rim only (packaged standing upright)
+                const roundedDiameter = Math.ceil(rimDiameterMm / 10) * 10;
+                packageLength = roundedDiameter + RIM_PACKAGE_MARGIN;
+                packageWidth = Math.ceil(rimWidthMm / 10) * 10 + RIM_PACKAGE_MARGIN;
+                packageHeight = roundedDiameter + RIM_PACKAGE_MARGIN;
 
                 details = `
                     <p><strong>Szczegóły obliczenia:</strong></p>
@@ -229,9 +239,9 @@
             }
 
             return {
-                length: diameter,
-                width: width,
-                height: height,
+                length: packageLength,
+                width: packageWidth,
+                height: packageHeight,
                 details: details
             };
         }
