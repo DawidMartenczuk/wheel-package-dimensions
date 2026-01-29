@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kalkulator Wymiarów Paczki Kół</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen py-8">
+    <div class="container mx-auto px-4 max-w-2xl">
+        <div class="bg-white rounded-lg shadow-lg p-6 md:p-8">
+            <h1 class="text-3xl font-bold text-gray-800 mb-2">Kalkulator Wymiarów Paczki</h1>
+            <p class="text-gray-600 mb-6">Oblicz wymiary paczki dla kół, opon lub felg</p>
+
+            <!-- Type Selector -->
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Typ produktu:</label>
+                <div class="flex gap-4">
+                    <button id="btn-wheel" class="type-btn flex-1 px-4 py-2 rounded-lg border-2 border-blue-500 bg-blue-500 text-white font-medium hover:bg-blue-600 transition">
+                        Koło
+                    </button>
+                    <button id="btn-tyre" class="type-btn flex-1 px-4 py-2 rounded-lg border-2 border-gray-300 bg-white text-gray-700 font-medium hover:bg-gray-50 transition">
+                        Opona
+                    </button>
+                    <button id="btn-rim" class="type-btn flex-1 px-4 py-2 rounded-lg border-2 border-gray-300 bg-white text-gray-700 font-medium hover:bg-gray-50 transition">
+                        Felga
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tyre Size Input (for wheel and tyre) -->
+            <div id="tyre-input-section" class="mb-6">
+                <label for="tyre-size" class="block text-sm font-medium text-gray-700 mb-2">
+                    Rozmiar opony (format: X/YRz):
+                </label>
+                <input 
+                    type="text" 
+                    id="tyre-size" 
+                    placeholder="np. 225/55R16"
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                <p class="text-xs text-gray-500 mt-1">X = szerokość (mm), Y = profil (%), z = średnica felgi (cale)</p>
+            </div>
+
+            <!-- Rim Size Input (for rim only) -->
+            <div id="rim-input-section" class="mb-6 hidden">
+                <label for="rim-size" class="block text-sm font-medium text-gray-700 mb-2">
+                    Rozmiar felgi (format: XxYJ):
+                </label>
+                <input 
+                    type="text" 
+                    id="rim-size" 
+                    placeholder="np. 16x7J"
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                <p class="text-xs text-gray-500 mt-1">X = średnica (cale), Y = szerokość (cale)</p>
+            </div>
+
+            <!-- Calculate Button -->
+            <button 
+                id="calculate-btn"
+                class="w-full bg-green-500 text-white font-bold py-3 px-6 rounded-lg hover:bg-green-600 transition mb-6"
+            >
+                Oblicz wymiary paczki
+            </button>
+
+            <!-- Results Section -->
+            <div id="results" class="hidden">
+                <div class="bg-blue-50 border-l-4 border-blue-500 p-4 rounded">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4">Wymiary paczki:</h2>
+                    <div class="space-y-2">
+                        <div class="flex justify-between">
+                            <span class="font-medium text-gray-700">Długość:</span>
+                            <span id="result-length" class="text-gray-900 font-bold">-</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="font-medium text-gray-700">Szerokość:</span>
+                            <span id="result-width" class="text-gray-900 font-bold">-</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="font-medium text-gray-700">Wysokość:</span>
+                            <span id="result-height" class="text-gray-900 font-bold">-</span>
+                        </div>
+                    </div>
+                    <div class="mt-4 pt-4 border-t border-blue-200">
+                        <div id="details" class="text-sm text-gray-700">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Error Message -->
+            <div id="error" class="hidden mt-4">
+                <div class="bg-red-50 border-l-4 border-red-500 p-4 rounded">
+                    <p class="text-red-700 font-medium" id="error-message"></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Info Section -->
+        <div class="mt-6 bg-white rounded-lg shadow-lg p-6">
+            <h2 class="text-lg font-bold text-gray-800 mb-3">Informacje</h2>
+            <div class="text-sm text-gray-700 space-y-2">
+                <p><strong>Koło:</strong> Kompletne koło z oponą na feldze - wymiary obejmują zarówno felgę jak i oponę.</p>
+                <p><strong>Opona:</strong> Sama opona - wymiary bazują na rozmiarze opony.</p>
+                <p><strong>Felga:</strong> Sama felga bez opony - wymiary bazują na rozmiarze felgi.</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Constants
+        const INCH_TO_MM = 25.4;
+        const TYRE_PACKAGE_MARGIN = 20; // Extra margin for tyre/wheel packaging (mm)
+        const RIM_PACKAGE_MARGIN = 30; // Extra margin for rim packaging (mm)
+        
+        let currentType = 'wheel';
+
+        // Type selection buttons
+        const typeButtons = {
+            wheel: document.getElementById('btn-wheel'),
+            tyre: document.getElementById('btn-tyre'),
+            rim: document.getElementById('btn-rim')
+        };
+
+        const tyreInputSection = document.getElementById('tyre-input-section');
+        const rimInputSection = document.getElementById('rim-input-section');
+        const calculateBtn = document.getElementById('calculate-btn');
+        const resultsDiv = document.getElementById('results');
+        const errorDiv = document.getElementById('error');
+
+        // Handle type selection
+        Object.keys(typeButtons).forEach(type => {
+            typeButtons[type].addEventListener('click', () => {
+                currentType = type;
+                
+                // Update button styles
+                Object.keys(typeButtons).forEach(t => {
+                    if (t === type) {
+                        typeButtons[t].className = 'type-btn flex-1 px-4 py-2 rounded-lg border-2 border-blue-500 bg-blue-500 text-white font-medium hover:bg-blue-600 transition';
+                    } else {
+                        typeButtons[t].className = 'type-btn flex-1 px-4 py-2 rounded-lg border-2 border-gray-300 bg-white text-gray-700 font-medium hover:bg-gray-50 transition';
+                    }
+                });
+
+                // Show/hide appropriate input sections
+                if (type === 'rim') {
+                    tyreInputSection.classList.add('hidden');
+                    rimInputSection.classList.remove('hidden');
+                } else {
+                    tyreInputSection.classList.remove('hidden');
+                    rimInputSection.classList.add('hidden');
+                }
+
+                // Hide results and errors
+                resultsDiv.classList.add('hidden');
+                errorDiv.classList.add('hidden');
+            });
+        });
+
+        // Parse tyre size (e.g., 225/55R16)
+        function parseTyreSize(input) {
+            const regex = /^(\d+)\/(\d+)R(\d+(?:\.\d+)?)$/i;
+            const match = input.trim().match(regex);
+            
+            if (!match) {
+                throw new Error('Nieprawidłowy format rozmiaru opony. Użyj formatu X/YRz (np. 225/55R16)');
+            }
+
+            return {
+                width: parseInt(match[1]), // width in mm
+                profile: parseInt(match[2]), // aspect ratio as percentage
+                rimDiameter: parseFloat(match[3]) // rim diameter in inches
+            };
+        }
+
+        // Parse rim size (e.g., 16x7J)
+        function parseRimSize(input) {
+            const regex = /^(\d+(?:\.\d+)?)x(\d+(?:\.\d+)?)J?$/i;
+            const match = input.trim().match(regex);
+            
+            if (!match) {
+                throw new Error('Nieprawidłowy format rozmiaru felgi. Użyj formatu XxYJ (np. 16x7J)');
+            }
+
+            return {
+                diameter: parseFloat(match[1]), // diameter in inches
+                width: parseFloat(match[2]) // width in inches
+            };
+        }
+
+        // Calculate package dimensions
+        // Note: Assumes wheels/tyres are packaged standing upright (vertically)
+        function calculateDimensions(type, input) {
+            let packageLength, packageWidth, packageHeight, details;
+
+            if (type === 'wheel' || type === 'tyre') {
+                const tyre = parseTyreSize(input);
+                
+                // Calculate tyre dimensions
+                const sidewallHeight = (tyre.width * tyre.profile) / 100; // in mm
+                const totalDiameter = (tyre.rimDiameter * INCH_TO_MM) + (2 * sidewallHeight); // convert inches to mm and add both sidewalls
+                
+                // Package dimensions (wheels packaged standing upright)
+                // Length and height are based on the wheel diameter (standing upright)
+                // Width is based on the tyre width
+                const roundedDiameter = Math.ceil(totalDiameter / 10) * 10; // Round up to nearest 10mm
+                packageLength = roundedDiameter + TYRE_PACKAGE_MARGIN;
+                packageWidth = Math.ceil(tyre.width / 10) * 10 + TYRE_PACKAGE_MARGIN;
+                packageHeight = roundedDiameter + TYRE_PACKAGE_MARGIN;
+
+                details = `
+                    <p><strong>Szczegóły obliczenia:</strong></p>
+                    <p>Szerokość opony: ${tyre.width} mm</p>
+                    <p>Profil opony: ${tyre.profile}%</p>
+                    <p>Średnica felgi: ${tyre.rimDiameter}"</p>
+                    <p>Wysokość boku: ${Math.round(sidewallHeight)} mm</p>
+                    <p>Całkowita średnica: ${Math.round(totalDiameter)} mm</p>
+                `;
+
+            } else if (type === 'rim') {
+                const rim = parseRimSize(input);
+                
+                // Convert rim dimensions to mm
+                const rimDiameterMm = rim.diameter * INCH_TO_MM;
+                const rimWidthMm = rim.width * INCH_TO_MM;
+                
+                // Package dimensions for rim only (packaged standing upright)
+                const roundedDiameter = Math.ceil(rimDiameterMm / 10) * 10;
+                packageLength = roundedDiameter + RIM_PACKAGE_MARGIN;
+                packageWidth = Math.ceil(rimWidthMm / 10) * 10 + RIM_PACKAGE_MARGIN;
+                packageHeight = roundedDiameter + RIM_PACKAGE_MARGIN;
+
+                details = `
+                    <p><strong>Szczegóły obliczenia:</strong></p>
+                    <p>Średnica felgi: ${rim.diameter}" (${Math.round(rimDiameterMm)} mm)</p>
+                    <p>Szerokość felgi: ${rim.width}" (${Math.round(rimWidthMm)} mm)</p>
+                `;
+            }
+
+            return {
+                length: packageLength,
+                width: packageWidth,
+                height: packageHeight,
+                details: details
+            };
+        }
+
+        // Handle calculate button click
+        calculateBtn.addEventListener('click', () => {
+            try {
+                // Hide previous results and errors
+                resultsDiv.classList.add('hidden');
+                errorDiv.classList.add('hidden');
+
+                let input;
+                if (currentType === 'rim') {
+                    input = document.getElementById('rim-size').value;
+                } else {
+                    input = document.getElementById('tyre-size').value;
+                }
+
+                if (!input.trim()) {
+                    throw new Error('Proszę wprowadzić rozmiar.');
+                }
+
+                const dimensions = calculateDimensions(currentType, input);
+
+                // Display results
+                document.getElementById('result-length').textContent = dimensions.length + ' mm';
+                document.getElementById('result-width').textContent = dimensions.width + ' mm';
+                document.getElementById('result-height').textContent = dimensions.height + ' mm';
+                document.getElementById('details').innerHTML = dimensions.details;
+
+                resultsDiv.classList.remove('hidden');
+
+            } catch (error) {
+                document.getElementById('error-message').textContent = error.message;
+                errorDiv.classList.remove('hidden');
+            }
+        });
+
+        // Allow Enter key to trigger calculation
+        document.getElementById('tyre-size').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                calculateBtn.click();
+            }
+        });
+
+        document.getElementById('rim-size').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                calculateBtn.click();
+            }
+        });
+    </script>
+</body>
+</html>
